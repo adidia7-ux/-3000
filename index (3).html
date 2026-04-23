@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מעקב שעות עבודה</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy: #1A3A5C;
+    --blue: #2E75B6;
+    --blue-light: #EBF3FB;
+    --blue-mid: #B0C8E4;
+    --blue-row: #D6E8F7;
+    --text: #1a1a2e;
+    --text-muted: #5a6a7a;
+    --bg: #f0f4f9;
+    --surface: #ffffff;
+    --border: #dde6f0;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  body { font-family: 'Heebo', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  .app-header { background: var(--navy); padding: 0 32px; display: flex; align-items: center; height: 58px; gap: 12px; }
+  .app-header h1 { color: #fff; font-size: 18px; font-weight: 500; }
+  .app-header .sub { margin-right: auto; font-size: 12px; color: rgba(255,255,255,0.4); }
+
+  .tabs-bar { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; padding: 0 32px; }
+  .tab-btn { padding: 14px 22px; font-size: 14px; font-family: 'Heebo', sans-serif; color: var(--text-muted); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: color 0.15s; display: flex; align-items: center; gap: 7px; }
+  .tab-btn:hover { color: var(--navy); }
+  .tab-btn.active { color: var(--navy); font-weight: 600; border-bottom-color: var(--blue); }
+
+  .main { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
+  .panel { display: none; }
+  .panel.active { display: block; animation: fadeIn 0.18s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
+  .stat-card.accent { border-top: 3px solid var(--blue); }
+  .stat-card .s-label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+  .stat-card .s-value { font-size: 24px; font-weight: 600; color: var(--navy); }
+  .stat-card .s-value.green { color: #27500A; }
+  .stat-card .s-value.blue  { color: #0C447C; }
+  .stat-card .s-value.amber { color: #854F0B; }
+
+  .toolbar { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+  .btn { font-family: 'Heebo', sans-serif; font-size: 13px; padding: 8px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; transition: background 0.12s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn:hover { background: var(--blue-light); border-color: var(--blue-mid); }
+  .btn-primary { background: var(--navy); color: #fff; border-color: var(--navy); font-weight: 500; }
+  .btn-primary:hover { background: var(--blue); border-color: var(--blue); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-danger { color: #A32D2D; border-color: #F09595; }
+  .btn-danger:hover { background: #FCEBEB; }
+  select.fsel { font-family: 'Heebo', sans-serif; font-size: 13px; padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; }
+
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { background: var(--navy); color: #fff; padding: 11px 13px; text-align: right; font-weight: 500; font-size: 12px; }
+  tbody td { padding: 9px 13px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tbody tr:nth-child(even) td { background: var(--blue-light); }
+  tbody tr:hover td { background: var(--blue-row) !important; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody input[type="date"], tbody input[type="time"], tbody input[type="number"] { font-family: 'Heebo', sans-serif; font-size: 13px; padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); width: 100%; }
+  tbody input:focus { outline: none; border-color: var(--blue); }
+  .empty-td { text-align: center; padding: 32px !important; color: var(--text-muted); font-size: 14px; }
+
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 500; }
+  .b-green { background: #EAF3DE; color: #27500A; }
+  .b-amber { background: #FAEEDA; color: #633806; }
+  .b-blue  { background: #E6F1FB; color: #0C447C; }
+
+  .month-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .month-nav .mtitle { flex: 1; text-align: center; font-size: 16px; font-weight: 600; color: var(--navy); }
+
+  .summary-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin-top: 16px; }
+  .summary-box h3 { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .sum-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 32px; }
+  .sum-row { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .sum-row:last-child { border-bottom: none; }
+  .sum-row .lbl { color: var(--text-muted); }
+  .sum-row .val { font-weight: 500; }
+  .sum-total { display: flex; justify-content: space-between; padding: 14px 0 0; margin-top: 12px; border-top: 2px solid var(--blue); font-size: 16px; font-weight: 600; color: var(--navy); }
+
+  .settings-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; max-width: 480px; margin-bottom: 16px; }
+  .settings-card h3 { font-size: 14px; font-weight: 600; color: var(--navy); margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .field { margin-bottom: 16px; }
+  .field label { font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 6px; font-weight: 500; }
+  .field input, .field select { width: 100%; font-size: 14px; padding: 9px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: 'Heebo', sans-serif; transition: border-color 0.12s; }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--blue); }
+  .preview-pill { background: #EAF3DE; border: 1px solid #97C459; border-radius: var(--radius-sm); padding: 12px 16px; font-size: 13px; color: #27500A; line-height: 1.8; max-width: 480px; }
+  .preview-pill strong { font-weight: 600; }
+
+  @media (max-width: 680px) {
+    .main { padding: 16px 12px; }
+    .tabs-bar, .app-header { padding-right: 14px; padding-left: 14px; }
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .sum-grid { grid-template-columns: 1fr; }
+    table { font-size: 12px; }
+    thead th, tbody td { padding: 8px 8px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+    <circle cx="10" cy="10" r="9" stroke="white" stroke-width="1.5"/>
+    <path d="M10 5.5V10.5L13 13" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <h1>מעקב שעות עבודה</h1>
+  <span class="sub">חישוב שכר אוטומטי</span>
+</header>
+
+<nav class="tabs-bar">
+  <button class="tab-btn active" onclick="showTab('entry')">
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="1.5" width="12" height="12" rx="2"/><path d="M5 7.5l2 2 3.5-3.5"/></svg>
+    הזנת שעות
+  </button>
+  <button class="tab-btn" onclick="showTab('monthly')">
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="3" width="12" height="10" rx="1.5"/><path d="M5 1.5v3M10 1.5v3M1.5 7h12"/></svg>
+    סיכום חודשי
+  </button>
+  <button class="tab-btn" onclick="showTab('settings')">
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7.5" cy="7.5" r="2"/><path d="M7.5 1v2M7.5 12v2M1 7.5h2M12 7.5h2M3 3l1.5 1.5M10.5 10.5L12 12M3 12l1.5-1.5M10.5 4.5L12 3"/></svg>
+    הגדרות
+  </button>
+</nav>
+
+<main class="main">
+
+  <section class="panel active" id="panel-entry">
+    <div class="stats-row" id="entry-stats"></div>
+    <div class="toolbar">
+      <button class="btn btn-primary" onclick="addEntry()">+ הוסף יום</button>
+      <select class="fsel" id="month-filter" onchange="renderEntries()"></select>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <colgroup>
+          <col style="width:16%"><col style="width:13%"><col style="width:13%"><col style="width:12%">
+          <col style="width:12%"><col style="width:13%"><col style="width:13%"><col style="width:8%">
+        </colgroup>
+        <thead><tr>
+          <th>תאריך</th><th>שעת כניסה</th><th>שעת יציאה</th><th>הפסקה (דק')</th>
+          <th>סה"כ שעות</th><th>שעות רגילות</th><th>שעות נוספות</th><th></th>
+        </tr></thead>
+        <tbody id="entry-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-monthly">
+    <div class="month-nav">
+      <button class="btn" onclick="changeViewMonth(-1)">&#8250; הקודם</button>
+      <span class="mtitle" id="view-month-label"></span>
+      <button class="btn" onclick="changeViewMonth(1)">הבא &#8249;</button>
+    </div>
+    <div class="stats-row" id="monthly-stats"></div>
+    <div class="table-wrap">
+      <table>
+        <colgroup>
+          <col style="width:20%"><col style="width:13%"><col style="width:13%">
+          <col style="width:13%"><col style="width:18%"><col style="width:23%">
+        </colgroup>
+        <thead><tr>
+          <th>תאריך</th><th>סה"כ שעות</th><th>רגילות</th>
+          <th>נוספות</th><th>שכר יומי</th><th>סוג</th>
+        </tr></thead>
+        <tbody id="monthly-body"></tbody>
+      </table>
+    </div>
+    <div class="summary-box" id="monthly-summary"></div>
+  </section>
+
+  <section class="panel" id="panel-settings">
+    <div class="settings-card">
+      <h3>הגדרות שכר</h3>
+      <div class="field">
+        <label>שכר שעתי בסיסי</label>
+        <input id="s-hourly" type="number" min="1" step="0.5" onchange="saveSettings()"/>
+      </div>
+      <div class="field">
+        <label>שעות יום רגיל (מעל זה = שעות נוספות)</label>
+        <input id="s-regular" type="number" min="1" max="12" step="0.5" onchange="saveSettings()"/>
+      </div>
+      <div class="field">
+        <label>מכפיל שעות נוספות (לדוג' 1.25 = 125%)</label>
+        <input id="s-overtime" type="number" min="1" max="3" step="0.05" onchange="saveSettings()"/>
+      </div>
+      <div class="field">
+        <label>מטבע</label>
+        <select id="s-currency" onchange="saveSettings()">
+          <option value="₪">&#8362; שקל</option>
+          <option value="$">$ דולר</option>
+          <option value="€">&#8364; יורו</option>
+        </select>
+      </div>
+    </div>
+    <div class="preview-pill" id="settings-preview"></div>
+  </section>
+
+</main>
+
+<script>
+const monthNames=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+const dayNames=["א'","ב'","ג'","ד'","ה'","ו'","ש'"];
+
+function lsGet(k,d){try{return JSON.parse(localStorage.getItem(k))??d;}catch{return d;}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{}}
+
+let settings=lsGet('wt_settings',{hourly:50,regular:8,overtime:1.25,currency:'₪'});
+let entries=lsGet('wt_entries',[]);
+let nextId=lsGet('wt_nid',1);
+let viewYear=new Date().getFullYear();
+let viewMonth=new Date().getMonth();
+
+function calcHours(e){
+  if(!e.start||!e.end)return{total:0,regular:0,ot:0};
+  const[sh,sm]=e.start.split(':').map(Number);
+  const[eh,em]=e.end.split(':').map(Number);
+  let mins=(eh*60+em)-(sh*60+sm)-(parseInt(e.brk)||0);
+  if(mins<0)mins+=1440;
+  const total=Math.max(0,mins/60);
+  const regular=Math.min(total,settings.regular);
+  const ot=Math.max(0,total-settings.regular);
+  return{total,regular,ot};
+}
+function calcPay(e){const{regular,ot}=calcHours(e);return regular*settings.hourly+ot*settings.hourly*settings.overtime;}
+function fmtH(n){return n.toFixed(1);}
+function cur(n){return settings.currency+n.toLocaleString('he-IL',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function entryMonth(e){if(!e.date)return null;const d=new Date(e.date);return`${d.getFullYear()}-${d.getMonth()}`;}
+
+function rebuildMonthFilter(){
+  const sel=document.getElementById('month-filter');
+  const prev=sel.value;
+  const months=new Set();
+  const now=new Date();
+  months.add(`${now.getFullYear()}-${now.getMonth()}`);
+  entries.forEach(e=>{const m=entryMonth(e);if(m)months.add(m);});
+  const sorted=[...months].sort().reverse();
+  sel.innerHTML=sorted.map(k=>{
+    const[y,m]=k.split('-').map(Number);
+    return`<option value="${k}">${monthNames[m]} ${y}</option>`;
+  }).join('');
+  if(sorted.includes(prev))sel.value=prev;
+}
+
+function renderEntries(){
+  const fv=document.getElementById('month-filter').value;
+  if(!fv)return;
+  const[fy,fm]=fv.split('-').map(Number);
+  const filtered=entries.filter(e=>{const m=entryMonth(e);if(!m)return false;const[y,mo]=m.split('-').map(Number);return y===fy&&mo===fm;});
+  const tbody=document.getElementById('entry-body');
+  tbody.innerHTML=filtered.length===0
+    ?`<tr><td colspan="8" class="empty-td">אין ימים לחודש זה — לחץ "+ הוסף יום"</td></tr>`
+    :filtered.map(e=>{
+      const{total,regular,ot}=calcHours(e);
+      return`<tr>
+        <td><input type="date" value="${e.date}" onchange="upd(${e.id},'date',this.value)"/></td>
+        <td><input type="time" value="${e.start}" onchange="upd(${e.id},'start',this.value)"/></td>
+        <td><input type="time" value="${e.end}" onchange="upd(${e.id},'end',this.value)"/></td>
+        <td><input type="number" min="0" max="120" step="5" value="${e.brk||0}" onchange="upd(${e.id},'brk',this.value)"/></td>
+        <td style="font-weight:500;">${fmtH(total)}h</td>
+        <td><span class="badge b-green">${fmtH(regular)}h</span></td>
+        <td>${ot>0?`<span class="badge b-amber">${fmtH(ot)}h</span>`:'<span style="color:#aaa;font-size:12px;">—</span>'}</td>
+        <td style="text-align:center;"><button class="btn btn-sm btn-danger" onclick="delEntry(${e.id})" style="border:none;font-size:16px;padding:2px 8px;">&#215;</button></td>
+      </tr>`;
+    }).join('');
+  const totH=filtered.reduce((s,e)=>s+calcHours(e).total,0);
+  const totReg=filtered.reduce((s,e)=>s+calcHours(e).regular,0);
+  const totOT=filtered.reduce((s,e)=>s+calcHours(e).ot,0);
+  const totPay=filtered.reduce((s,e)=>s+calcPay(e),0);
+  document.getElementById('entry-stats').innerHTML=`
+    <div class="stat-card accent"><div class="s-label">סה"כ שעות</div><div class="s-value">${fmtH(totH)}h</div></div>
+    <div class="stat-card"><div class="s-label">שעות רגילות</div><div class="s-value blue">${fmtH(totReg)}h</div></div>
+    <div class="stat-card"><div class="s-label">שעות נוספות</div><div class="s-value amber">${fmtH(totOT)}h</div></div>
+    <div class="stat-card accent"><div class="s-label">שכר לתשלום</div><div class="s-value green">${cur(totPay)}</div></div>
+  `;
+}
+
+function addEntry(){
+  const today=new Date().toISOString().split('T')[0];
+  entries.push({id:nextId++,date:today,start:'09:00',end:'17:00',brk:30});
+  lsSet('wt_entries',entries);lsSet('wt_nid',nextId);
+  rebuildMonthFilter();
+  const now=new Date();document.getElementById('month-filter').value=`${now.getFullYear()}-${now.getMonth()}`;
+  renderEntries();
+}
+function upd(id,f,v){const e=entries.find(e=>e.id===id);if(e){e[f]=f==='brk'?parseInt(v)||0:v;lsSet('wt_entries',entries);renderEntries();}}
+function delEntry(id){entries=entries.filter(e=>e.id!==id);lsSet('wt_entries',entries);rebuildMonthFilter();renderEntries();}
+
+function changeViewMonth(d){
+  viewMonth+=d;
+  if(viewMonth>11){viewMonth=0;viewYear++;}
+  if(viewMonth<0){viewMonth=11;viewYear--;}
+  renderMonthly();
+}
+
+function renderMonthly(){
+  document.getElementById('view-month-label').textContent=`${monthNames[viewMonth]} ${viewYear}`;
+  const filtered=entries
+    .filter(e=>{const m=entryMonth(e);if(!m)return false;const[y,mo]=m.split('-').map(Number);return y===viewYear&&mo===viewMonth;})
+    .sort((a,b)=>a.date.localeCompare(b.date));
+  const tbody=document.getElementById('monthly-body');
+  if(filtered.length===0){
+    tbody.innerHTML=`<tr><td colspan="6" class="empty-td">אין נתונים לחודש זה</td></tr>`;
+  }else{
+    tbody.innerHTML=filtered.map(e=>{
+      const{total,regular,ot}=calcHours(e);
+      const pay=calcPay(e);
+      const d=new Date(e.date);
+      return`<tr>
+        <td>${e.date} <span style="color:var(--text-muted);font-size:12px;">${dayNames[d.getDay()]}</span></td>
+        <td style="font-weight:500;">${fmtH(total)}h</td>
+        <td>${fmtH(regular)}h</td>
+        <td>${ot>0?`<span class="badge b-amber">${fmtH(ot)}h</span>`:'—'}</td>
+        <td style="font-weight:600;color:#0C447C;">${cur(pay)}</td>
+        <td>${ot>0?'<span class="badge b-amber">עם שעות נוספות</span>':'<span class="badge b-green">יום רגיל</span>'}</td>
+      </tr>`;
+    }).join('');
+  }
+  const totH=filtered.reduce((s,e)=>s+calcHours(e).total,0);
+  const totReg=filtered.reduce((s,e)=>s+calcHours(e).regular,0);
+  const totOT=filtered.reduce((s,e)=>s+calcHours(e).ot,0);
+  const regPay=filtered.reduce((s,e)=>s+calcHours(e).regular*settings.hourly,0);
+  const otPay=filtered.reduce((s,e)=>s+calcHours(e).ot*settings.hourly*settings.overtime,0);
+  const totPay=regPay+otPay;
+  document.getElementById('monthly-stats').innerHTML=`
+    <div class="stat-card accent"><div class="s-label">ימי עבודה</div><div class="s-value">${filtered.length}</div></div>
+    <div class="stat-card"><div class="s-label">סה"כ שעות</div><div class="s-value">${fmtH(totH)}h</div></div>
+    <div class="stat-card"><div class="s-label">שעות נוספות</div><div class="s-value amber">${fmtH(totOT)}h</div></div>
+    <div class="stat-card accent"><div class="s-label">סה"כ לתשלום</div><div class="s-value green">${cur(totPay)}</div></div>
+  `;
+  document.getElementById('monthly-summary').innerHTML=`
+    <h3>פירוט תשלום &mdash; ${monthNames[viewMonth]} ${viewYear}</h3>
+    <div class="sum-grid">
+      <div>
+        <div class="sum-row"><span class="lbl">שעות רגילות</span><span class="val">${fmtH(totReg)}h</span></div>
+        <div class="sum-row"><span class="lbl">תעריף שעתי</span><span class="val">${cur(settings.hourly)}</span></div>
+        <div class="sum-row"><span class="lbl">שכר רגיל</span><span class="val" style="color:#0C447C;">${cur(regPay)}</span></div>
+      </div>
+      <div>
+        <div class="sum-row"><span class="lbl">שעות נוספות</span><span class="val">${fmtH(totOT)}h</span></div>
+        <div class="sum-row"><span class="lbl">תעריף שע"נ (&times;${settings.overtime})</span><span class="val">${cur(settings.hourly*settings.overtime)}</span></div>
+        <div class="sum-row"><span class="lbl">תוספת שע"נ</span><span class="val" style="color:#854F0B;">${cur(otPay)}</span></div>
+      </div>
+    </div>
+    <div class="sum-total"><span>סה"כ לתשלום</span><span>${cur(totPay)}</span></div>
+  `;
+}
+
+function saveSettings(){
+  settings.hourly=parseFloat(document.getElementById('s-hourly').value)||50;
+  settings.regular=parseFloat(document.getElementById('s-regular').value)||8;
+  settings.overtime=parseFloat(document.getElementById('s-overtime').value)||1.25;
+  settings.currency=document.getElementById('s-currency').value;
+  lsSet('wt_settings',settings);
+  updatePreview();
+  renderEntries();
+}
+
+function updatePreview(){
+  document.getElementById('settings-preview').innerHTML=
+    `<strong>שעה רגילה:</strong> ${settings.currency}${settings.hourly} &nbsp;|&nbsp;
+     <strong>שעה נוספת:</strong> ${settings.currency}${(settings.hourly*settings.overtime).toFixed(2)} (&times;${settings.overtime})<br>
+     מעל <strong>${settings.regular}</strong> שעות ביום = שעות נוספות`;
+}
+
+function loadSettings(){
+  document.getElementById('s-hourly').value=settings.hourly;
+  document.getElementById('s-regular').value=settings.regular;
+  document.getElementById('s-overtime').value=settings.overtime;
+  document.getElementById('s-currency').value=settings.currency;
+  updatePreview();
+}
+
+function showTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  const tabs=['entry','monthly','settings'];
+  document.querySelectorAll('.tab-btn')[tabs.indexOf(tab)].classList.add('active');
+  document.getElementById('panel-'+tab).classList.add('active');
+  if(tab==='monthly')renderMonthly();
+  if(tab==='entry')renderEntries();
+}
+
+loadSettings();
+rebuildMonthFilter();
+renderEntries();
+</script>
+</body>
+</html>
